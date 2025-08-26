@@ -23,7 +23,7 @@ E o write é capaz de escrever, além de texto, dados binários, comtrolar quand
 **3. Qual método é mais previsível? Por quê você acha isso?**
 
 ```
-[Sua análise aqui]
+O método write() é mais previsível, porque ele faz exatamente uma chamada de sistema para cada solicitação de escrita, sem depender de buffers internos ou formatação extra. Já o printf() utiliza buffering e pode gerar mais chamadas de sistema dependendo do tamanho da saída ou da forma como os dados são formatados. Isso torna o comportamento do printf() menos direto, enquanto o write() é consistente e previsível.
 ```
 
 ---
@@ -44,19 +44,19 @@ strace -e openat,read,close ./ex2_leitura
 **1. Qual file descriptor foi usado? Por que não começou em 0, 1 ou 2?**
 
 ```
-[Sua análise aqui]
+O file descriptor usado foi o 3, porque os descritores 0, 1 e 2 já são reservados pelo sistema para stdin (entrada padrão), stdout (saída padrão) e stderr (saída de erro). Assim, o próximo descritor disponível é o 3.
 ```
 
 **2. Como você sabe que o arquivo foi lido completamente?**
 
 ```
-[Sua análise aqui]
+Porque a última chamada de read() retornou 0, o que indica EOF (End of File) — ou seja, não havia mais dados a serem lidos.
 ```
 
 **3. Por que verificar retorno de cada syscall?**
 
 ```
-[Sua análise aqui]
+Porque o retorno mostra se a chamada foi bem-sucedida. Em caso de erro, o retorno é -1 e o programa pode reagir (ex.: tentar novamente, liberar recursos ou exibir uma mensagem).
 ```
 
 ---
@@ -83,19 +83,19 @@ strace -e openat,read,close ./ex2_leitura
 **1. Como o tamanho do buffer afeta o número de syscalls?**
 
 ```
-[Sua análise aqui]
+Quanto menor o buffer, mais chamadas read() são necessárias para percorrer o arquivo inteiro. Buffers maiores reduzem a quantidade de syscalls.
 ```
 
 **2. Todas as chamadas read() retornaram BUFFER_SIZE bytes? Discorra brevemente sobre**
 
 ```
-[Sua análise aqui]
+Não. Na maioria das vezes sim, mas a última chamada pode retornar menos bytes, dependendo do tamanho do arquivo, ou até 0 no final (EOF)
 ```
 
 **3. Qual é a relação entre syscalls e performance?**
 
 ```
-[Sua análise aqui]
+Syscalls têm custo alto, pois exigem transição do modo usuário para modo kernel. Menos syscalls, menos overhead, melhor desempenho.
 ```
 
 ---
@@ -119,31 +119,37 @@ Resultado: [ ] Idênticos [ ] Diferentes
 **1. Por que devemos verificar que bytes_escritos == bytes_lidos?**
 
 ```
-[Sua análise aqui]
+Para garantir a integridade da cópia. Se menos bytes forem escritos do que lidos, parte do arquivo de destino ficará corrompida ou incompleta
 ```
 
 **2. Que flags são essenciais no open() do destino?**
 
 ```
-[Sua análise aqui]
+As flags O_WRONLY | O_CREAT | O_TRUNC:
+
+O_WRONLY: abre para escrita.
+
+O_CREAT: cria o arquivo se não existir.
+
+O_TRUNC: zera o conteúdo se já existir.
 ```
 
 **3. O número de reads e writes é igual? Por quê?**
 
 ```
-[Sua análise aqui]
+Sim, pois para cada leitura realizada deve haver uma escrita correspondente, mantendo a proporção entre o que foi lido e o que foi copiado.
 ```
 
 **4. Como você saberia se o disco ficou cheio?**
 
 ```
-[Sua análise aqui]
+O write() retornaria menos bytes escritos do que o solicitado, ou retornaria -1 com erro ENOSPC.
 ```
 
 **5. O que acontece se esquecer de fechar os arquivos?**
 
 ```
-[Sua análise aqui]
+O sistema mantém os descritores abertos até o processo terminar, desperdiçando recursos. Além disso, dados podem não ser realmente gravados no disco, já que ficam no buffer.
 ```
 
 ---
@@ -155,19 +161,19 @@ Resultado: [ ] Idênticos [ ] Diferentes
 **1. Como as syscalls demonstram a transição usuário → kernel?**
 
 ```
-[Sua análise aqui]
+Cada syscall (read, write, open, close) faz o programa sair do modo usuário e pedir ao kernel que execute a operação. Isso é necessário porque só o kernel tem acesso direto ao hardware.
 ```
 
 **2. Qual é o seu entendimento sobre a importância dos file descriptors?**
 
 ```
-[Sua análise aqui]
+São referências numéricas para identificar arquivos abertos. Sem eles, o kernel não teria como saber em qual arquivo realizar as operações de leitura/escrita
 ```
 
 **3. Discorra sobre a relação entre o tamanho do buffer e performance:**
 
 ```
-[Sua análise aqui]
+Buffers maiores → menos chamadas de sistema → menos overhead. Mas buffers gigantes podem desperdiçar memória. Existe um equilíbrio ideal dependendo do tamanho do arquivo e do sistema.
 ```
 
 ### ⚡ Comparação de Performance
@@ -179,11 +185,13 @@ time cp dados/origem.txt dados/destino_cp.txt
 ```
 
 **Qual foi mais rápido?** _____
-
+````
+O comando cp do sistema.
+````
 **Por que você acha que foi mais rápido?**
 
 ```
-[Sua análise aqui]
+Porque o cp é altamente otimizado, usando rotinas eficientes do kernel, buffers ajustados e até chamadas especiais como sendfile(), reduzindo o número de cópias de dados entre usuário e kernel.
 ```
 
 ---
